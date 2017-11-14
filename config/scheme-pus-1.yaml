@@ -2,4 +2,4 @@ name: "SchemePUS"
 parameters:
     low: 1
     high: 5
-    func: lambda x: x * x
+    func: "lambda x: x * x"

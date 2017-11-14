@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from abc import ABC, abstractmethod
 from jobs import Job, Jobs
@@ -5,33 +6,28 @@ from jobs import Job, Jobs
 import pdb
 
 class JobGenerator(ABC):
-    def __init__(self):
-        self.dist_name = None
-        self.dist_params = {}
+    def __init__(self, config, data_path):
+        self.dist_name = self.__class__.__name__
+        self.save_path = os.path.join(data_path, self.dist_name)
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+
+        self.config = config
+        self.dist_params = config["parameters"]
     
     @abstractmethod
     def generate(self, num_jobs=0):
         pass
 
-# TODO create configuration files and just pass in a params
+    def get_file_count(self):
+        files = os.listdir(self.save_path)
+        return len(files)
+
 class SchemePUS(JobGenerator):
-    #def __init__(self, low, high, func=None):
-    def __init__(self, params):
-        super().__init__()
-
-        self.dist_name = self.__class__.__name__
-        self.dist_params = params
-
-        """
-        self.dist_params = {
-            "low": low,
-            "high": high,
-            "func": func
-        }
-        """
-
-    # GE how should arrivals be modeled
-    def generate(self, num_jobs=0, file_name=None):
+    def __init__(self, config, data_path):
+        super().__init__(config, data_path)
+        
+    def generate(self, num_jobs=0, file_path=None):
         # Arrivals
         time = 0
         arrivals = []
@@ -49,12 +45,17 @@ class SchemePUS(JobGenerator):
         values = func(durations)
         
         # Jobs
-        jobs = Jobs(self.dist_name, self.dist_params)
+        jobs = Jobs(self.config)
         jobs.extend([Job(arrivals[i], durations[i], 
                          values[i], i) for i in range(num_jobs)])
 
         # Save job sequence
-        if not file_name == None:
-            Jobs.save_to_file(jobs, file_name)
+        if file_path:
+            Jobs.save_to_file(jobs, file_path)
+        else:
+            count = str(self.get_file_count())
+            file_name = self.dist_name + "_" + count + ".txt"
+            file_path = os.path.join(self.save_path, file_name)
+            Jobs.save_to_file(jobs, file_path)
 
         return jobs
