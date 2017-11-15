@@ -38,7 +38,7 @@ class SchemePUS(JobGenerator):
 
         # Duration
         durations = np.random.randint(low=self.dist_params["low"],
-                                      high=self.dist_params["high"], 
+                                      high=self.dist_params["high"] + 1, 
                                       size=num_jobs)
         # Value
         func = eval(self.dist_params["func"])
