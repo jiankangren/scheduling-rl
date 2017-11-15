@@ -1,0 +1,14 @@
+agent:
+    type: "MDP"
+
+environment:
+    episodes: 1
+    generation_scheme: "single"
+    num_machine: 1
+     
+job_generator:
+    name: "Uniform"
+    parameters:
+        low: 1
+        high: 5
+        func: "lambda x: x * x"
