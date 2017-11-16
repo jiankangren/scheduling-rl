@@ -53,32 +53,30 @@ class Machine():
         return True
 
 class Environment():
-    def __init__(self, config, directory=None):
-        if config_path:
-            self._parse_configuration(config)
+    def __init__(self, config, job_gen, save_path, load_jobs):
+        self.config = self._parse_configuration(config)
+        self.job_gen = job_gen
+        self.save_path = save_path
 
-        # Environment subconfiguration
-        env_config = config["environment"]
-        self.num
-
-        # Job generaton subconfiguration
-
-    def _parse_configuration(self, config):
-        """
-        try:
-            with open(config_path, "r") as config_file:
-                config_yaml = config_file.read()
-        except:
-            raise EnvironmentError("Unable to open %s" % (config_path))
-
-        cfg = yaml.load(config_yaml)
-        """
-
-        # Environment subconfiguration
-        env_cfg = config["environment"]
-        self.machines = [Machine() for i in range(env_cfg["num_machines"])]
-        self.episodes = env_cfg["episodes"]
-
-
+        self.episodes = config["episodes"]
+        self.job_horizon = config["job_horizon"]
+        self.machines = [Machine() for i in range(config["num_machines"])]
+        
+        # Obtain jobs
+        self.job_sequences = []
+        generation_scheme = config["generetion_scheme"]
+        if not load_jobs:
+            if generation_scheme == "single":
+                jobs_sequence = job_gen.generate(self.job_horizon, save_path)
+                self.job_sequences.append(job_sequence)
+            elif generation_scheme == "different":
+                for episode in range(self.episodes):
+                    job_sequence = job_gen.generate(self.job_horizon, save_path)
+                    self.job_sequences.append(job_sequence)
+            else:
+                raise ValueError("Unknown configuration parameter %s for \
+                        'generation_scheme'" % (generation_scheme))
+        else:
+            
 
 

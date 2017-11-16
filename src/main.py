@@ -1,4 +1,4 @@
-import getopt, os, sys, yaml
+import getopt, os, sys, time, yaml
 from jobs import Jobs
 from job_generator import Uniform
 from schedulers.sched_optimal import SchedOptimal
@@ -38,6 +38,7 @@ def main():
     # Parse arguments
     config_path = None
     directory = None
+    load_jobs = False
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:d:", 
@@ -60,6 +61,7 @@ def main():
             config_path = arg
         elif opt in ("-s", "--directory"):
             directory = arg
+            load_jobs = True
         else:
             raise ValueError("Unknown (opt, arg): (%s, %s)" % (opt, arg))
 
@@ -71,17 +73,24 @@ def main():
 
     # Parse configuration
     config = _parse_configuration(config_path)
-    
+    job_gen_config = config["job_generator"]
     agent_config = config["agent"]
-    agent = agent_map["type"](agent_config)
-
     env_config = config["environment"]
+
+    # Save configuration
     if not directory:
-        job_gen_config = config["job_generator"]
-        job_gen = job_generator_map[job_gen_config["name"]](config, data_path)
-        env = Environment(env_config, job_gen=job_gen)
-    else:
-        env = Environment(env_config, dir_path=directory)
+        save_dir_name = time.strftime("%y:%m:%d:%H:%M:%S")
+        save_path = os.path.join(data_path, run_dir_name)
+        os.makedirs(save_path)
+
+    # FIXME data_path part isn't correct
+    job_gen = job_generator_map[job_gen_config["name"]](job_gen_config,
+            save_path)
+    agent = agent_map["type"](agent_config, job_gen, save_path)
+    env = Environment(env_config, job_gen, save_path, load_jobs)
+
+    
+
 
     """
     # Run scheduler on jobs

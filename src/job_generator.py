@@ -23,7 +23,7 @@ class JobGenerator(ABC):
         files = os.listdir(self.save_path)
         return len(files)
 
-class SchemePUS(JobGenerator):
+class Uniform(JobGenerator):
     def __init__(self, config, data_path):
         super().__init__(config, data_path)
         

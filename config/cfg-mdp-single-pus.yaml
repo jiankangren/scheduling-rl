@@ -3,8 +3,10 @@ agent:
 
 environment:
     episodes: 1
+    job_horizon: 10
     generation_scheme: "single"
     num_machine: 1
+    scheduling: "non-preemptive"
      
 job_generator:
     name: "Uniform"
