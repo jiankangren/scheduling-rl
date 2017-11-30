@@ -32,7 +32,7 @@ class Uniform(JobGenerator):
         time = 0
         arrivals = []
         while len(arrivals) < num_jobs:
-            if np.random.randint(2) == 1:
+            if np.random.random() < self.dist_params["new"]:
                 arrivals.append(time)
             time += 1
 

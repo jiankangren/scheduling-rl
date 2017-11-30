@@ -1,6 +1,6 @@
 import bisect
 
-class SchedOptimal():
+class SchedulerOptimal():
     def schedule(self, jobs, num_machines):
         if num_machines == 1:
             opt_schedule = self._schedule_one_machine(jobs)

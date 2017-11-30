@@ -2,7 +2,7 @@ import logging
     
 # TODO move this to main under __debug__
 logger = logging.getLogger("Env-Logger")
-hdlr = logging.FileHandler("../logs")
+hdlr = logging.FileHandler("../logs/log.txt")
 logger.addHandler(hdlr)
 logger.setLevel(logging.DEBUG)
 
@@ -52,24 +52,34 @@ class Machine():
         
         return True
 
+class State(list):
+    def __init__(self, job_arrival, machines, time):
+        super().__init__()
+
+        mach_state = [[machine.current_job, machine.work_end_time - time] for
+                machine in machines]
+        self = [job_arrival, mach_state]
+
+
 class Environment():
     def __init__(self, config, job_gen, save_path, load_jobs):
-        self.config = self._parse_configuration(config)
         self.job_gen = job_gen
         self.save_path = save_path
 
-        self.episodes = config["episodes"]
-        self.job_horizon = config["job_horizon"]
-        self.machines = [Machine() for i in range(config["num_machines"])]
+        #self.episodes = config["episodes"]
+        #self.job_horizon = config["job_horizon"]
+        self.mode = config["mode"]
+        self.machines = [Machine(i, self.mode) for i in range(config["num_machines"])]
         
         # Obtain jobs
+        """
         self.job_sequences = []
-        generation_scheme = config["generetion_scheme"]
+        generation_scheme = config["generation_scheme"]
         if not load_jobs:
             if generation_scheme == "single":
                 jobs_sequence = job_gen.generate(self.job_horizon, save_path)
                 self.job_sequences.append(job_sequence)
-            elif generation_scheme == "different":
+            elif generation_scheme == "multiple":
                 for episode in range(self.episodes):
                     job_sequence = job_gen.generate(self.job_horizon, save_path)
                     self.job_sequences.append(job_sequence)
@@ -77,6 +87,8 @@ class Environment():
                 raise ValueError("Unknown configuration parameter %s for \
                         'generation_scheme'" % (generation_scheme))
         else:
-            
+            print("Complete me")
+        """
 
-
+        # Save information
+        

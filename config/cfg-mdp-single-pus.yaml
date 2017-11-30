@@ -1,16 +1,19 @@
-agent:
-    type: "MDP"
+scheduler:
+    algorithm: "value iteration"
+    function: "table"
+    mode: "non-preemptive"
 
 environment:
-    episodes: 1
-    job_horizon: 10
-    generation_scheme: "single"
-    num_machine: 1
-    scheduling: "non-preemptive"
+    mode: "non-preemptive"
+    num_machines: 1
      
 job_generator:
-    name: "Uniform"
+    episodes: 1
+    generation_scheme: "single"
+    name: "uniform"
+    job_horizon: 10
     parameters:
-        low: 1
+        new: 0.5
+        low: 2
         high: 5
         func: "lambda x: x * x"
