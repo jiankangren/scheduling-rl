@@ -92,3 +92,8 @@ class Environment():
 
         # Save information
         
+    def evaluate(self):
+        pass
+
+    def train(self):
+        pass

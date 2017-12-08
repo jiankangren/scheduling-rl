@@ -113,6 +113,8 @@ def main():
     if train:
         scheduler.train()
 
+    if evaluate 
+
 
     """
     # Run scheduler on jobs

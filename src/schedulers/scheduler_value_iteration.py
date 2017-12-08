@@ -1,4 +1,3 @@
-import math
 from collections import OrderedDict
 from environment import State
 
@@ -131,7 +130,7 @@ class SchedulerValueIteration:
 
         # Value iteration 
         iterations = 0
-        delta =  math.inf
+        delta =  epsilon
         while delta >= epsilon:
             delta = 0
             for state, actions in Q.items():
