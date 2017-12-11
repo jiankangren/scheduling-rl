@@ -1,3 +1,4 @@
+import numpy as np
 from collections import OrderedDict
 from environment import State
 
@@ -14,18 +15,14 @@ class SchedulerValueIteration:
         self.data_path = data_path
 
         self.line_type = "offline"
+        self.Q_func = None
 
         # Job generator must be uniform
         if not job_gen.dist_name == "Uniform":
             raise ValueError("Parameter job_gen must be a uniform distribution")
 
-        """
-        sched_next_states = []
-        
-        for job_arrival in job_arrivals:
-        """
-            
-    def train(self):
+           
+    def train(self, train_sequences=None):
         # Initialize offline learning
         new_prob = self.job_gen.dist_params["new"]
         low = self.job_gen.dist_params["low"]
@@ -147,4 +144,14 @@ class SchedulerValueIteration:
             print(iterations, delta)
 
         print("Complete")
+        print(len(Q))
         print(Q)
+
+        self.Q_func = Q
+
+    def evaluate(self, state):
+        actions = self.Q_func[state]
+        max_action = np.argmax(actions)
+        return max_action
+
+

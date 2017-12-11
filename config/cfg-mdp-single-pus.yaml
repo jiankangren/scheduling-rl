@@ -1,17 +1,23 @@
+common:
+    schedule_mode: "non-preemptive"
+    train_mode: "offline"
+
 scheduler:
     algorithm: "value iteration"
     function: "table"
-    mode: "non-preemptive"
 
 environment:
-    mode: "non-preemptive"
+    episodes: 100
     num_machines: 1
      
 job_generator:
-    episodes: 1
-    generation_scheme: "single"
     name: "uniform"
-    job_horizon: 10
+    train:
+        job_horizon: 10
+        num_sequences: 1
+    evaluate:
+        job_horizon: 10
+        num_sequences: 1
     parameters:
         new: 0.5
         low: 2

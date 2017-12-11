@@ -1,7 +1,8 @@
 import bisect
 
 class SchedulerOptimal():
-    def schedule(self, jobs, num_machines):
+    # TODO need to figure out how this should be done
+    def evaluate(self, jobs, num_machines):
         if num_machines == 1:
             opt_schedule = self._schedule_one_machine(jobs)
         elif num_machines == 2:

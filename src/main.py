@@ -4,12 +4,9 @@ from jobs import Jobs
 from job_generator import Uniform
 from schedulers import *
 
-# Constants
-low = 1
-high = 5
-num_jobs = 10
-func = "lambda x: x * x"
+import pdb
 
+# Constants
 job_gen_map = {
     "uniform": Uniform,
 }
@@ -76,7 +73,7 @@ def main():
             directory = arg
             load_jobs = True
         elif opt in ("-e", "--evaluate"):
-            raise NotImplementedError("Finish me")
+            evaluate = True
         elif opt in ("-t", "--train"):
             train = True 
         else:
@@ -100,27 +97,42 @@ def main():
 
     # Parse configuration
     config = parse_configuration(config_path)
-    job_gen_config = config["job_generator"]
-    sched_config = config["scheduler"]
-    env_config = config["environment"]
+    
+    # Job generator
+    job_gen_name = config["job_generator"]["name"]
+    job_gen = job_gen_map[job_gen_name](config, save_path)
 
-    # FIXME data_path part isn't correct
-    job_gen = job_gen_map[job_gen_config["name"]](job_gen_config,
-            save_path)
-    scheduler = sched_map[sched_config["algorithm"]](sched_config, job_gen, save_path)
-    env = Environment(env_config, job_gen, save_path, load_jobs)
+    # FIXME continue work from here
+    # Schedulers
+    sched_algo = config["scheduler"]["algorithm"]
+    scheduler = sched_map[sched_algo](config, job_gen, save_path)
 
+    scheduler_optimal = SchedulerOptimal()
+
+    # Environment
+    environment = Environment(config, job_gen, save_path, load_jobs)
+
+
+    # FIXME this will depend if it is offline or online
+    # FIXME the train_sequences will have to be a Python generator
     if train:
-        scheduler.train()
+        train_sequences = None
+        if config["common"]["train_mode"] == "online":
+            train_sequences = job_gen.generate_job_sequences(save_path, "train")
 
-    if evaluate 
+        scheduler.train(train_sequences)
 
+    # FIXME need to be able to load a Q_func in the future
+    # I should pass in the scheduler itself rather than the Q_func along which
+    # will have to be evaluated
+    if evaluate:
+        # Evaluate scheduler
+        eval_sequences = job_gen.generate_job_sequences(save_path, "evaluate")
+        environment.simulate(eval_sequences, 1, scheduler)
 
-    """
-    # Run scheduler on jobs
-    sched_optimal = SchedOptimal()
-    opt_schedule = sched_optimal.schedule(jobs, 1)
-    """
+        # Evaluate optimal scheduler
+        num_machines = config["environment"]["num_machines"]
+        opt_schedule = scheduler_optimal.evaluate(eval_sequences, 1)
 
 if __name__ == "__main__":
     main()
