@@ -1,14 +1,22 @@
 import bisect
 
 class SchedulerOptimal():
-    # TODO need to figure out how this should be done
-    def evaluate(self, jobs, num_machines):
-        if num_machines == 1:
-            opt_schedule = self._schedule_one_machine(jobs)
-        elif num_machines == 2:
-            opt_schedule = self._schedule_two_machines(jobs)
-        else:
-            opt_schedule = self._schedule_mult_machines(jobs)
+    # FIXME need to be able to return the whole optimal schedule not just reward
+    def evaluate(self, job_sequences, num_sequences, num_machines):
+        opt_rewards = []
+        for _ in range(num_sequences):
+            job_sequence = next(job_sequences)
+
+            if num_machines == 1:
+                opt_reward = self._schedule_one_machine(job_sequence)
+            elif num_machines == 2:
+                opt_reward = self._schedule_two_machines(job_sequnce)
+            else:
+                opt_reward = self._schedule_mult_machines(job_sequence)
+
+            opt_rewards.append(opt_reward)
+
+        return opt_rewards
 
     def _sort_jobs(self, jobs):
         return sorted(jobs, key=lambda x: x.departure)

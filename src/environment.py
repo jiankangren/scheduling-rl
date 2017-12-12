@@ -16,6 +16,9 @@ class Machine():
         self.mach_idx = mach_idx
         self.mode = mode
 
+        self.clear_internal_state()
+        
+    def clear_internal_state(self):
         self.current_job = None
         self.work_start_time = -1
         self.work_rem_time = -1
@@ -93,26 +96,32 @@ class Environment():
         num_machines = self.config["num_machines"]
         self.machines = [Machine(i, schedule_mode) for i in range(num_machines)]
 
+        # FIXME
         # Generate all states, transitions, and rewards for offline
+        """
         train_mode = config["common"]["train_mode"]
         if train_mode == "offline":
             dist_params = config["job_generator"]["parameters"]
-            self.generate_state_space(config, dist_params, num_machines)
+            self.generate_state_space(dist_params, num_machines)
+        """
 
     def _get_next_states(type, state, action, all_state, job_arrivals):
         pass
 
-    # FIXME only works with Uniform for now
-    def generate_state_space(self, config, dist_params, num_machines):
+    # FIXME only works with Uniform and non-preemptive now
+    # FIXME for offline need to generate everything but for online I only need
+    # to generate the states and return
+    def generate_state_space(self, dist_params, num_machines):
         # Obtain distribution parameters
         new_prob = dist_params["new"]
         low = dist_params["low"]
         high = dist_params["high"]
+        func = eval(dist_params["func"])
 
         job_types = [0] + [i for i in range(low, high+1)]
 
         # Compute probabilites
-        probabilites = {}
+        probabilities = {}
         for job_type in job_types:
             if job_type == 0:
                 probabilities[job_type] = new_prob
@@ -127,15 +136,15 @@ class Environment():
         # Determine intermediate machine states
         inter_mach_states = [(0, 0)]
         for job_type in job_types:
-            for rem_time in range(job_type-2, 0, 1):
+            for rem_time in range(job_type-2, 0, -1):
                 mach_state = (job_type, rem_time)
-                inter_mach_states.append(mach_states)
+                inter_mach_states.append(mach_state)
 
         # Determine scheduled machine states
         sched_mach_states = []
         for job_type in job_types[1:]:
             mach_state = (job_type, job_type-1)
-            sched_mach_states.append(mach_states)
+            sched_mach_states.append(mach_state)
 
         # Determine set of machine states corresponding to a 'schedule' action.
         # This is computed by taking the permutation of n-1 intermediate machine
@@ -156,9 +165,36 @@ class Environment():
             permute_combined_mach_states.extend(permute_combined_mach_state)
 
         # Determine the set of machine states corresponding to a 'nop' action
-        permute_nop_states = list(product(inter_states, repeat=num_machines))
+        permute_nop_states = list(product(inter_mach_states, repeat=num_machines))
 
+        # Combine all states together
+        all_mach_states = permute_combined_mach_states + permute_nop_states
+        all_complete_states = []
+        for mach_state in all_mach_states:
+            for job_type in job_types:
+                complete_state = (job_type,) + (mach_state,)
+                all_complete_states.append(complete_state)
 
+        # Create a state action transition table
+        transition_table = OrderedDict()
+        for state in all_complete_states:
+            transition_table[state] = OrderedDict()
+            for action in actions:
+                # FIXME make the 'non-preemptive' part general
+                next_transitions = self._get_next_transitions("non-preemptive",
+                        state, all_complete_states, action, probabilities, 
+                        job_types, func)
+                transition_table[state][action] = next_transitions
+
+        # FIXME remove this
+        for state, actions in transition_table.items():
+            for action, transitions in actions.items():
+                print(state, action, transitions)
+
+        # Return all information
+        return (all_complete_states, actions, transition_table)
+
+        """
         # FIXME this may have to be changed, at the moment job_arrivals = job_types
         job_arrivals = [0] + [i for i in range(low, high+1)]
         job_types = [0] + [i for i in range(low, high+1)]
@@ -172,40 +208,107 @@ class Environment():
 
         # Transitions to scheduled jobs
         scheduled_next_states = {}
-        
+        """
 
-    # FIXME simulation will have to be different for training/evaluating
-    # FIXME need to iterate through all job_sequences, currently this is only
-    # happening for a single one
-    def simulate(self, job_sequences, episodes, scheduler):
-        # Iterate through all episodes
-        for episode in range(episodes):
-            time = 0
-            job_idx = 0
+    def _get_next_transitions(self, type, state, all_states, action,
+            probabilities, job_arrivals, func):
+        # FIXME
+        if not type == "non-preemptive":
+            raise NotImplementedError("Only 'non-preemptive' is completed")
+
+        next_mach_states = []
+        reward = 0
+
+        # NOP action
+        if action[0] == 0:
+            for mach_state in state[1]:
+                up_mach_state = tuple(np.subtract(mach_state, (0, 1)))
+                if up_mach_state[1] <= 0:
+                    reward += func(up_mach_state[0])
+                    up_mach_state = (0, 0)
+                next_mach_states.append(up_mach_state)
+
+        # SCHEDULE action
+        else:
+            sched_mach_idx = action[1]
+
+            # No arriving job
+            if state[0] == 0:
+                return []
+            # FIXME this is only for non-preemptive
+            elif not state[1][sched_mach_idx] == (0, 0):
+                return [] 
+            else:
+                for mach_idx, mach_state in enumerate(state[1]):
+                    if mach_idx == sched_mach_idx:
+                        up_mach_state = (state[0], state[0] - 1)
+                    else:
+                        up_mach_state = tuple(np.subtract(mach_state, (0, 1)))
+                        if up_mach_state[1] <= 0:
+                            reward += func(up_mach_state[0])
+                            up_mach_state = (0, 0)
+
+                    next_mach_states.append(up_mach_state)
+
+        # Determine the full state, probabilities, and rewards
+        next_mach_states = tuple(next_mach_states)
+        transitions = []
+        for job_arrival in job_arrivals:
+            next_state = (job_arrival, next_mach_states)
+            probability = probabilities[job_arrival]
+            transition = (next_state, probability, reward)
+            transitions.append(transition)
+
+        return transitions
+
+    # FIXME simulation will have to be different for training/evaluating. For
+    # simplicity, it might be better to create separate functions (even though
+    # they are somewhat similar)
+    def evaluate(self, job_sequences, num_sequences, scheduler):
+        # FIXME make this a single number rather than a vector to save space
+        rewards = []
+
+        # FIXME need to iterate till the longest time
+        # FIXME need to clear machines after every instance
+        # Iterate through all sequences in an episode
+        for _ in range(num_sequences):
             job_sequence = next(job_sequences)
 
+            for machine in self.machines:
+                machine.clear_internal_state()
+
+            # Maximum simulation time
+            time = 0
+            job_idx = 0
+            end_time = max(job_sequence, key=lambda x: x.departure).departure
+
             # Iterate through a job sequence
-            while job_idx < len(job_sequence):
-                arriving_job = job_sequence[job_idx]
-                if arriving_job.arrival == time:
-                    job_idx += 1
-                else:
-                    arriving_job = None
-                
-                # FIXME only for a single machine for now
+            while time < end_time:            
+                if job_idx < len(job_sequence):
+                    arriving_job = job_sequence[job_idx]
+                    if arriving_job.arrival == time:
+                        job_idx += 1
+                    else:
+                        arriving_job = None
+
                 # Obtain state
-                machine = self.machines[0]
-                machine_state = machine.get_state()
+                mach_states = []
+                for machine in self.machines:
+                    mach_state = machine.get_state()
+                    mach_states.append(mach_state)
+                mach_states = tuple(mach_states)
 
                 if not arriving_job:
-                    state = (0, machine_state)
+                    state = (0, mach_states)
                 else:
-                    state = (arriving_job.duration, machine_state)
+                    state = (arriving_job.duration, mach_states)
 
                 # Obtain action
                 action = scheduler.evaluate(state)
-                if action == 1:
-                    machine.load_job(arriving_job)
+                type = action[0]
+                mach_idx = action[1]
+                if type == 1:
+                    self.machines[mach_idx].load_job(arriving_job)
 
                 # Update environment state
                 machine.update_state()
@@ -215,6 +318,6 @@ class Environment():
             total_reward = 0
             for machine in self.machines:
                 total_reward += machine.reward
+            rewards.append(total_reward)
 
-            print(total_reward)
-
+        return rewards

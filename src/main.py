@@ -1,4 +1,5 @@
 import getopt, os, sys, time, yaml
+import numpy as np
 from environment import Environment
 from jobs import Jobs
 from job_generator import Uniform
@@ -102,37 +103,52 @@ def main():
     job_gen_name = config["job_generator"]["name"]
     job_gen = job_gen_map[job_gen_name](config, save_path)
 
-    # FIXME continue work from here
     # Schedulers
     sched_algo = config["scheduler"]["algorithm"]
     scheduler = sched_map[sched_algo](config, job_gen, save_path)
-
     scheduler_optimal = SchedulerOptimal()
 
     # Environment
     environment = Environment(config, job_gen, save_path, load_jobs)
 
-
     # FIXME this will depend if it is offline or online
-    # FIXME the train_sequences will have to be a Python generator
+    # FIXME have job_gen return the sequences as well as number of sequences
     if train:
         train_sequences = None
         if config["common"]["train_mode"] == "online":
             train_sequences = job_gen.generate_job_sequences(save_path, "train")
+            scheduler.train(train_sequences)
+        else:
+            # FIXME make this part of environment in __init__
+            dist_params = config["job_generator"]["parameters"]
+            num_machines = config["environment"]["num_machines"]
 
-        scheduler.train(train_sequences)
+            state_space = environment.generate_state_space(dist_params,
+                                                           num_machines)
 
-    # FIXME need to be able to load a Q_func in the future
-    # I should pass in the scheduler itself rather than the Q_func along which
-    # will have to be evaluated
+            # FIXME temporary
+            #scheduler.train_old(train_sequences)
+            scheduler.train(train_sequences, state_space)
+
+    # FIXME have job_gen return the sequences as well as number of sequences
     if evaluate:
         # Evaluate scheduler
         eval_sequences = job_gen.generate_job_sequences(save_path, "evaluate")
-        environment.simulate(eval_sequences, 1, scheduler)
+        eval_num_sequences = config["job_generator"]["evaluate"]["num_sequences"]
+        rewards = environment.evaluate(eval_sequences, eval_num_sequences, scheduler)
 
         # Evaluate optimal scheduler
         num_machines = config["environment"]["num_machines"]
-        opt_schedule = scheduler_optimal.evaluate(eval_sequences, 1)
+        opt_rewards = scheduler_optimal.evaluate(eval_sequences,
+                                                 eval_num_sequences, 
+                                                 num_machines)
+
+        # Compute competitive ratio
+        total_rewards = np.mean(rewards)
+        total_opt_rewards = np.mean(opt_rewards)
+
+        competitive_ratio = total_opt_rewards / total_rewards
+        print(competitive_ratio)
 
 if __name__ == "__main__":
     main()

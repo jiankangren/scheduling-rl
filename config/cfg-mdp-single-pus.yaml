@@ -17,7 +17,7 @@ job_generator:
         num_sequences: 1
     evaluate:
         job_horizon: 10
-        num_sequences: 1
+        num_sequences: 2
     parameters:
         new: 0.5
         low: 2
