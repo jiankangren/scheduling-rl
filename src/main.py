@@ -1,15 +1,13 @@
 import getopt, os, sys, time, yaml
+import numpy as np
 from environment import Environment
-from jobs import Jobs
+#from jobs import Jobs
 from job_generator import Uniform
 from schedulers import *
 
-# Constants
-low = 1
-high = 5
-num_jobs = 10
-func = "lambda x: x * x"
+import pdb
 
+# Constants
 job_gen_map = {
     "uniform": Uniform,
 }
@@ -46,12 +44,15 @@ def main():
 
     # Parse arguments
     # TODO Change directory to work_path
+    # FIXME have directory be the directory where the configuration is located
+    # at
     config_path = None
     directory = None
     load_jobs = False
     evaluate = False
     train = False
 
+    # FIXME remove :d because I am not using it anymore
     try:
         short_flags = "hc:d:et"
         long_flags = ["help", "config=", "directory=", "evaluate", "train"]
@@ -76,12 +77,14 @@ def main():
             directory = arg
             load_jobs = True
         elif opt in ("-e", "--evaluate"):
-            raise NotImplementedError("Finish me")
+            evaluate = True
         elif opt in ("-t", "--train"):
             train = True 
         else:
             raise ValueError("Unknown (opt, arg): (%s, %s)" % (opt, arg))
 
+    """
+    # FIXME redo the logic here and repl
     # Directory and configuration options
     if directory and not config_path:
         config_path = os.join.path(directory, "configuration.yaml")
@@ -97,30 +100,70 @@ def main():
     else:
         print_usage_info()
         sys.exit()
+    """
+
+    # FIXME
+    if not config_path:
+        print_usage_info()
+        sys.exit(1)
+    elif not os.path.exists(config_path):
+        raise EnvironmentError("Unable to locate %s" % (config_path))
+    else:
+        save_path = os.path.dirname(config_path)
 
     # Parse configuration
     config = parse_configuration(config_path)
-    job_gen_config = config["job_generator"]
-    sched_config = config["scheduler"]
-    env_config = config["environment"]
+    
+    # Job generator
+    job_gen_name = config["job_generator"]["name"]
+    job_gen = job_gen_map[job_gen_name](config, save_path)
 
-    # FIXME data_path part isn't correct
-    job_gen = job_gen_map[job_gen_config["name"]](job_gen_config,
-            save_path)
-    scheduler = sched_map[sched_config["algorithm"]](sched_config, job_gen, save_path)
-    env = Environment(env_config, job_gen, save_path, load_jobs)
+    # Schedulers
+    sched_algo = config["scheduler"]["algorithm"]
+    scheduler = sched_map[sched_algo](config, job_gen, save_path)
+    scheduler_optimal = SchedulerOptimal()
 
+    # Environment
+    environment = Environment(config, job_gen, save_path, load_jobs)
+
+    # FIXME this will depend if it is offline or online
+    # FIXME have job_gen return the sequences as well as number of sequences
     if train:
-        scheduler.train()
+        train_sequences = None
+        if config["common"]["train_mode"] == "online":
+            train_sequences = job_gen.generate_job_sequences(save_path, "train")
+            scheduler.train(train_sequences)
+        else:
+            # FIXME make this part of environment in __init__
+            dist_params = config["job_generator"]["parameters"]
+            num_machines = config["environment"]["num_machines"]
 
-    if evaluate 
+            state_space = environment.generate_state_space(dist_params,
+                                                           num_machines)
 
+            # FIXME temporary
+            #scheduler.train_old(train_sequences)
+            scheduler.train(train_sequences, state_space)
 
-    """
-    # Run scheduler on jobs
-    sched_optimal = SchedOptimal()
-    opt_schedule = sched_optimal.schedule(jobs, 1)
-    """
+    # FIXME have job_gen return the sequences as well as number of sequences
+    if evaluate:
+        # Evaluate scheduler
+        eval_sequences = job_gen.generate_job_sequences(save_path, "evaluate")
+        eval_num_sequences = config["job_generator"]["evaluate"]["num_sequences"]
+        rewards = environment.evaluate(eval_sequences, eval_num_sequences, scheduler)
+
+        # Evaluate optimal scheduler
+        num_machines = config["environment"]["num_machines"]
+        opt_rewards = scheduler_optimal.evaluate(eval_sequences,
+                                                 eval_num_sequences, 
+                                                 num_machines)
+
+        # Compute competitive ratio
+        total_rewards = np.mean(rewards)
+        total_opt_rewards = np.mean(opt_rewards)
+
+        competitive_ratio = total_opt_rewards / total_rewards
+        print("\nCompetitive ratio: ", competitive_ratio, "\n")
 
 if __name__ == "__main__":
     main()
