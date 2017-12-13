@@ -1,7 +1,7 @@
 import getopt, os, sys, time, yaml
 import numpy as np
 from environment import Environment
-from jobs import Jobs
+#from jobs import Jobs
 from job_generator import Uniform
 from schedulers import *
 
@@ -44,12 +44,15 @@ def main():
 
     # Parse arguments
     # TODO Change directory to work_path
+    # FIXME have directory be the directory where the configuration is located
+    # at
     config_path = None
     directory = None
     load_jobs = False
     evaluate = False
     train = False
 
+    # FIXME remove :d because I am not using it anymore
     try:
         short_flags = "hc:d:et"
         long_flags = ["help", "config=", "directory=", "evaluate", "train"]
@@ -80,6 +83,8 @@ def main():
         else:
             raise ValueError("Unknown (opt, arg): (%s, %s)" % (opt, arg))
 
+    """
+    # FIXME redo the logic here and repl
     # Directory and configuration options
     if directory and not config_path:
         config_path = os.join.path(directory, "configuration.yaml")
@@ -95,6 +100,16 @@ def main():
     else:
         print_usage_info()
         sys.exit()
+    """
+
+    # FIXME
+    if not config_path:
+        print_usage_info()
+        sys.exit(1)
+    elif not os.path.exists(config_path):
+        raise EnvironmentError("Unable to locate %s" % (config_path))
+    else:
+        save_path = os.path.dirname(config_path)
 
     # Parse configuration
     config = parse_configuration(config_path)
@@ -148,7 +163,7 @@ def main():
         total_opt_rewards = np.mean(opt_rewards)
 
         competitive_ratio = total_opt_rewards / total_rewards
-        print(competitive_ratio)
+        print("\nCompetitive ratio: ", competitive_ratio, "\n")
 
 if __name__ == "__main__":
     main()

@@ -63,7 +63,13 @@ class SchedulerValueIteration:
 
 
         # Value iteration completed
-        print("Complete: \n", Q_table, "\n")
+        print("Complete, optimal Q-values are listed below for each state:")
+        for state, actions in Q_table.items():
+            state_str = "State " + str(state) + ": "
+            for action, Q_value in actions.items():
+                state_str += str(action) + " - " + str(Q_value) + ", "
+            print(state_str)
+
         self.Q_table = Q_table
            
     def train_old(self, train_sequences):

@@ -186,10 +186,12 @@ class Environment():
                         job_types, func)
                 transition_table[state][action] = next_transitions
 
+        """
         # FIXME remove this
         for state, actions in transition_table.items():
             for action, transitions in actions.items():
                 print(state, action, transitions)
+        """
 
         # Return all information
         return (all_complete_states, actions, transition_table)
