@@ -7,11 +7,6 @@ The simulator can be run as follows:
 python3 main.py [--options]
 ```
 
-Additionally, to run an existing example, simply run:
-```
-./run_example.sh
-```
-
 where options are specified as follows:
 * -h, --help        prints out usage information
 * -c, --config=     path to YAML configuration file
@@ -20,6 +15,11 @@ where options are specified as follows:
 
 When either the 'train' or 'evaluate' options are specified, the program will
 generate a eponymous directory containing all job sequences.
+
+Additionally, to run an existing example, simply run:
+```
+./run_example.sh
+```
 
 ## Configuration File
 The simulator takes in a single YAML configuration file. An example of such a
