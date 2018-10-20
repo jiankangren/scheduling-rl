@@ -105,8 +105,9 @@ class JobGenerator(ABC):
                 job_sequences.append(self.generate_job_sequence(file_path,
                                                                 job_horizon))
 
+        # Modify job_sequences to be a cycle
         job_sequences = itertools.cycle(job_sequences)
-        return job_sequences
+        return job_sequences, num_sequences
 
     @staticmethod
     def get_file_count(dir):

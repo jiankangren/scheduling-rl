@@ -76,16 +76,6 @@ class Machine():
         if self.work_rem_time == 0:
             self.unload_job()
 
-# TODO use this
-class State(list):
-    def __init__(self, job_arrival, machines, time):
-        super().__init__()
-
-        mach_state = ((machine.current_job, machine.work_rem_time,) for
-                machine in machines)
-        self = (job_arrival, mach_state)
-
-
 class Environment():
     def __init__(self, config, jobs, save_path, load_jobs):
         self.save_path = save_path
@@ -96,22 +86,17 @@ class Environment():
         num_machines = self.config["num_machines"]
         self.machines = [Machine(i, schedule_mode) for i in range(num_machines)]
 
-        # FIXME
+        # FIXME change train_mode to be function == tabular
         # Generate all states, transitions, and rewards for offline
-        """
         train_mode = config["common"]["train_mode"]
         if train_mode == "offline":
             dist_params = config["job_generator"]["parameters"]
-            self.generate_state_space(dist_params, num_machines)
-        """
-
-    def _get_next_states(type, state, action, all_state, job_arrivals):
-        pass
+            self.state_space = self.generate_state_space(dist_params, num_machines)
 
     # FIXME only works with Uniform and non-preemptive now
     # FIXME for offline need to generate everything but for online I only need
     # to generate the states and return
-    def generate_state_space(self, dist_params, num_machines):
+    def generate_state_space(self, dist_params, num_machines, tr):
         # Obtain distribution parameters
         new_prob = dist_params["new"]
         low = dist_params["low"]
@@ -175,6 +160,10 @@ class Environment():
                 complete_state = (job_type,) + (mach_state,)
                 all_complete_states.append(complete_state)
 
+        # FIXME
+        # Return if 'online'
+        if 
+
         # Create a state action transition table
         transition_table = OrderedDict()
         for state in all_complete_states:
@@ -186,32 +175,9 @@ class Environment():
                         job_types, func)
                 transition_table[state][action] = next_transitions
 
-        """
-        # FIXME remove this
-        for state, actions in transition_table.items():
-            for action, transitions in actions.items():
-                print(state, action, transitions)
-        """
-
         # Return all information
         return (all_complete_states, actions, transition_table)
-
-        """
-        # FIXME this may have to be changed, at the moment job_arrivals = job_types
-        job_arrivals = [0] + [i for i in range(low, high+1)]
-        job_types = [0] + [i for i in range(low, high+1)]
-
-        # Transitions to idle states
-        idle_next_states = []
-        idle_machines = tuple([(0, 0) for i in range(num_machines)])
-        for job_arrival in job_arrivals:
-            state = (job_arrival, idle_machines)
-            idle_next_states.append(state)
-
-        # Transitions to scheduled jobs
-        scheduled_next_states = {}
-        """
-
+        
     def _get_next_transitions(self, type, state, all_states, action,
             probabilities, job_arrivals, func):
         # FIXME
@@ -263,6 +229,54 @@ class Environment():
 
         return transitions
 
+    def train(self, job_sequences, num_sequencs, scheduler):
+        for _ in range(num_sequences):
+            job_sequence = next(job_sequences)
+            
+            for machine in self.machines:
+                machine.clear_internal_state()
+
+            # Maximum simulation time
+            time = 0
+            job_idx = 0
+            end_time = max(job_sequence, key=lambda x: x.departure).departure
+
+            # Iterate through a job sequence
+            while time < end_time:
+                if job_idx < len(job_sequence):
+                    arriving_job = job_sequence[job_idx]
+                    if arriving_job.arrival == time:
+                        job_idx += 1
+                    else:
+                        arriving_job = None
+
+               # Obtain state
+                mach_states = []
+                for machine in self.machines:
+                    mach_state = machine.get_state()
+                    mach_states.append(mach_state)
+                mach_states = tuple(mach_states)
+
+                if not arriving_job:
+                    state = (0, mach_states)
+                else:
+                    state = (arriving_job.duration, mach_states)
+
+                # Obtain action
+                action = scheduler.evaluate(state)
+                type = action[0]
+                mach_idx = action[1]
+                if type == 1:
+                    self.machines[mach_idx].load_job(arriving_job)
+
+                # Update environment state
+                machine.update_state()
+                time += 1
+
+                # Get reward back from the environment and update
+ 
+        return 0
+
     # FIXME simulation will have to be different for training/evaluating. For
     # simplicity, it might be better to create separate functions (even though
     # they are somewhat similar)
@@ -271,7 +285,6 @@ class Environment():
         rewards = []
 
         # FIXME need to iterate till the longest time
-        # FIXME need to clear machines after every instance
         # Iterate through all sequences in an episode
         for _ in range(num_sequences):
             job_sequence = next(job_sequences)

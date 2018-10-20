@@ -4,7 +4,10 @@ common:
 
 scheduler:
     algorithm: "value iteration"
-    function: "table"
+    function: "tabular"
+    train_params:
+        epsilon: 0.000001
+        gamma: 0.8
 
 environment:
     episodes: 100
@@ -17,7 +20,7 @@ job_generator:
         num_sequences: 1
     evaluate:
         job_horizon: 250
-        num_sequences: 10000
+        num_sequences: 10
     parameters:
         new: 0.5
         low: 2

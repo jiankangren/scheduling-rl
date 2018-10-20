@@ -1,7 +1,6 @@
 import getopt, os, sys, time, yaml
 import numpy as np
 from environment import Environment
-#from jobs import Jobs
 from job_generator import Uniform
 from schedulers import *
 
@@ -118,38 +117,36 @@ def main():
     job_gen_name = config["job_generator"]["name"]
     job_gen = job_gen_map[job_gen_name](config, save_path)
 
-    # Schedulers
-    sched_algo = config["scheduler"]["algorithm"]
-    scheduler = sched_map[sched_algo](config, job_gen, save_path)
-    scheduler_optimal = SchedulerOptimal()
-
     # Environment
     environment = Environment(config, job_gen, save_path, load_jobs)
 
-    # FIXME this will depend if it is offline or online
-    # FIXME have job_gen return the sequences as well as number of sequences
+    # Schedulers
+    function = config["scheduler"]["function"]
+    sched_algo = config["scheduler"]["algorithm"]
+    train_mode = config["common"]["train_mode"]
+
+    if function == "approximation":
+        raise NotImplementedError("Need to implement this")
+    else:
+        scheduler = sched_map[sched_algo](config, environment.state_space)  
+
+    scheduler_optimal = SchedulerOptimal()
+
+    # Training
     if train:
+        train_params = config["scheduler"]["train_params"]
         train_sequences = None
+
         if config["common"]["train_mode"] == "online":
-            train_sequences = job_gen.generate_job_sequences(save_path, "train")
-            scheduler.train(train_sequences)
+            train_sequences, train_num_sequences = job_gen.generate_job_sequences(save_path, "train")
+            environment.train(train_sequences, train_num_sequences, scheduler)
         else:
-            # FIXME make this part of environment in __init__
-            dist_params = config["job_generator"]["parameters"]
-            num_machines = config["environment"]["num_machines"]
+            scheduler.train(train_params)
 
-            state_space = environment.generate_state_space(dist_params,
-                                                           num_machines)
-
-            # FIXME temporary
-            #scheduler.train_old(train_sequences)
-            scheduler.train(train_sequences, state_space)
-
-    # FIXME have job_gen return the sequences as well as number of sequences
+    # Evaluation
     if evaluate:
         # Evaluate scheduler
-        eval_sequences = job_gen.generate_job_sequences(save_path, "evaluate")
-        eval_num_sequences = config["job_generator"]["evaluate"]["num_sequences"]
+        eval_sequences, eval_num_sequences = job_gen.generate_job_sequences(save_path, "evaluate")
         rewards = environment.evaluate(eval_sequences, eval_num_sequences, scheduler)
 
         # Evaluate optimal scheduler
